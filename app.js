@@ -22,6 +22,7 @@ class Player {
             condition: 'ground',
             attack_flag: false,
             move_flag: false,
+            fall_flag: false,
             jump_flag: false,
             img: new Image(),
             side: side,
@@ -51,42 +52,33 @@ class Player {
         this.keys = []
         this.keysArrSet()
         this.keysGet()
+        this.physics = {
+            y_speed: 0,
+            gravitation_force: 3,
+            jump_force: 30
+        }
     }
     drawPlayer(){
         this.animationCheck()
+        this.gravitation()
         this.animationFunction(this.animation.current)
         ctx.drawImage(this.properties.img, this.properties.img.width/this.animation.frame_max*this.animation.frame, 0,this.properties.img.width/this.animation.frame_max, this.properties.img.height, this.properties.x, this.properties.y, this.properties.width , this.properties.height)
     }
-    clearHistory(){
-        let time
-        if(this.keys_history.length != 0){
-            time = 2000 / this.keys_history.length
-            setTimeout(()=>{
-                if(this.keys_history.length != 0){
-                    this.keys_history.splice(0,1)
-                }
-                clearHistory()
-            },time)
-        }else{
-            setTimeout(clearHistory, 10)
-        }
-    }   
 
     gravitation(){
-        let fall_speed = 1 + fall.speed/2
-        if(this.properties.condition != 'ground' & grav_flag == true){
-            this.properties.y+=Math.floor(fall_speed)
-            if(this.properties.y >= floor-this.properties.height){
-                this.properties.condition = 'ground'
-                this.properties.y = floor-this.properties.height
-                setTimeout(()=>{
-                    this.properties.jump_flag = false  
-                }, 100) 
-            }else{
-                this.animation.frame = 0
+        if(this.y_speed != 0 && this.properties.condition == 'air' && (this.properties.y - this.physics.y_speed) > floor){
+            console.log('d')
+            this.physics.y_speed -= this.physics.gravitation_force
+            this.properties.y-=this.physics.y_speed
+            if(this.y_speed < 0){
+                this.jump_flag = false
+                this.fall_flag = true
             }
+        }else{
+            this.fall_flag = false
+            this.physics.y_speed = 0
+            this.properties.condition = 'ground'
         }
-        setTimeout(gravitation, 10)
     }
     keysGet(){
         document.addEventListener('keydown',(e)=>{
@@ -131,10 +123,17 @@ class Player {
             this.properties.side = 'left'
             this.properties.x-=this.properties.speed
         }
+        if(this.keys.includes(this.key_obj['Z']) && !this.jump_flag && !this.fall_flag){
+            this.jump_flag = true
+            this.physics.y_speed+=this.physics.jump_force
+            this.properties.condition = 'air'
+        }
     }
     updateAnimation(){
         if(this.animation.frame == this.animation.frame_max-1){
-            this.animation.frame = 0
+            if(this.resources.sprites[this.animation.current + '_' + this.properties.side].replay){
+               this.animation.frame = 0 
+            }
         }else{
             this.animation.frame++
         }
@@ -144,6 +143,9 @@ class Player {
         if(this.properties.move_flag == true){
             if(this.properties.condition == 'ground' && !this.properties.attack_flag){
                 this.animation.current = 'walk'
+            }
+            if(this.properties.jump_flag = true){
+                this.animation.current = 'jump'
             }
         }else{
             this.animation.current = 'idle'
